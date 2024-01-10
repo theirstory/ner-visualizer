@@ -1,2 +1,2 @@
 # ner-visualizer
-A lightweight applicatio to visualize NER data
+A lightweight application to visualize NER data
