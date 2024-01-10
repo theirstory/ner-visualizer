@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>NER - Visualizer</title>
+    <style>
+      .holder {
+        width: 880px;
+      }
+      .text-content {
+        width: 880px;
+        font-family: monospace;
+      }
+      .annotated-content {
+        width: 880px;
+        font-family: monospace;
+      }
+      .render-button {
+        width: 100px;
+        height: 50px;
+      }
+      .entity-loc {
+        background-color:aqua;
+      }
+    </style>
+  </head>
+  <body>
+    <h3>NER – Visualizer</h3>
+    <div class="holder">
+      <div class="input">
+        <textarea id="json-input" name="json-input" rows="30" cols="50" placeholder="JSON"></textarea>
+        <div>
+          <button class="render-button" onclick="render()">Render</button>
+        </div>
+      </div>
+      <h4>Output:</h4>
+      <p id="output">
+        <!--<div class="text-content">
+          Tom went to London.
+        </div>
+        <div class="annotated-content">
+          &nbsp;&nbsp;&nbsp;&nbsp;<span class="entity-loc">[LOC]--</span>
+        </div>-->
+      </p>
+    </div>
+    <script>
+      function render() {
+        let json = document.querySelector('#json-input').value;
+        let text;
+        let entities;
+
+        try {
+          // Parse the JSON string
+          let jsonArray = JSON.parse(json);
+
+          // Iterate through the array and process each object
+          jsonArray.forEach((obj) => {
+            text = obj.text;
+            entities = obj.entities;
+            console.log('Text:', obj.text);
+            console.log('Entities:', obj.entities);
+          });
+        } catch (error) {
+          // Handle JSON parsing error
+          console.error('Error parsing JSON:', error.message);
+          alert('Error parsing JSON:\n' + error.message);
+        }
+        
+        let lineLength = 100;
+        let textArray = splitStringIntoGroups(text, lineLength);
+        // Iterate through the result and create a new div for each group
+        textArray.forEach((group) => {
+          let newDiv = document.createElement('div');
+          newDiv.className = 'text-content';
+          newDiv.textContent = group;
+          document.querySelector('#output').appendChild(newDiv);
+        });
+
+        let entityStartChar = entities[0][0];
+        let entityEndChar = entities[0][1];
+        let entityTag = entities[0][2]; 
+
+        // Add the annotations
+        let lines = document.querySelectorAll('.text-content');
+        console.log(lines);
+        let chars = 0;
+        lines.forEach((line, index) => {
+          let lineStartChar = chars;
+          // keep a running total of chars
+          chars += line.innerText.length; 
+
+          console.log("lineStartChar = "+lineStartChar);
+          console.log("entityStartChar = "+entityStartChar);
+
+          if (entityStartChar >= lineStartChar) {
+            // add a line below with appropriate annotation
+            let annotation = document.createElement("div");
+            annotation.classList.add("annotated-content");
+
+            let annotationContent = "";
+
+            // pad the content
+            let spacesBefore = entityStartChar - lineStartChar;
+            for (i = 0; i < spacesBefore; i++) {
+              annotationContent += "&nbsp;";
+            }
+            annotationContent += "<span class='entity-"+entityTag.toLowerCase()+"'>"+entityTag;
+            
+
+            //calculate the remainig padding
+            let spacesAfter = entityEndChar - entityStartChar - entityTag.length;
+
+            // add padding to the end
+            if (spacesAfter > 0) {
+              for (i = 0; i < spacesAfter; i++) {
+                annotationContent += "&nbsp;";
+              }
+            }
+
+            annotationContent += "</span>";
+
+            console.log(annotationContent);
+
+            annotation.innerHTML = annotationContent;
+            console.log(annotation);
+            line.after(annotation);
+          }
+
+          if (index > 0) {
+            // +1 because the splitStringFunction doesn't preserve space at end of line
+            chars += 1;
+          }
+          console.log(line.innerText.length);
+        });
+      }
+      
+
+      function splitStringIntoGroups(inputString, maxGroupLength) {
+        // Split the input string into an array of words
+        var wordsArray = inputString.split(/\s+/);
+
+        // Initialize variables
+        var currentGroup = [];
+        var resultArray = [];
+
+        // Iterate through the words
+        wordsArray.forEach(function(word) {
+          // Check if adding the current word to the current group exceeds the maximum length
+          if (currentGroup.join(' ').length + word.length <= maxGroupLength) {
+            currentGroup.push(word);
+          } else {
+            // If adding the current word exceeds the maximum length, start a new group
+            resultArray.push(currentGroup.join(' '));
+            currentGroup = [word];
+          }
+        });
+
+        // Add the last group (if any)
+        if (currentGroup.length > 0) {
+          resultArray.push(currentGroup.join(' '));
+        }
+
+        return resultArray;
+      }
+
+
+
+    </script>
+  </body>
+</html>
