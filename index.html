@@ -23,6 +23,9 @@
       .entity-loc {
         background-color:aqua;
       }
+      .entity-person {
+        background-color:aquamarine;
+      }
     </style>
   </head>
   <body>
@@ -50,6 +53,9 @@
         let text;
         let entities;
 
+        // clear the output
+        document.querySelector('#output').innerHTML = "";
+
         try {
           // Parse the JSON string
           let jsonArray = JSON.parse(json);
@@ -66,6 +72,10 @@
           console.error('Error parsing JSON:', error.message);
           alert('Error parsing JSON:\n' + error.message);
         }
+
+        //strip out \t and \n
+        text = text.replaceAll("\t"," ");
+        text = text.replaceAll("\n"," ");
         
         let lineLength = 100;
         let textArray = splitStringIntoGroups(text, lineLength);
@@ -77,63 +87,77 @@
           document.querySelector('#output').appendChild(newDiv);
         });
 
-        let entityStartChar = entities[0][0];
-        let entityEndChar = entities[0][1];
-        let entityTag = entities[0][2]; 
+        entities.forEach((entity, index) => {
 
-        // Add the annotations
-        let lines = document.querySelectorAll('.text-content');
-        console.log(lines);
-        let chars = 0;
-        lines.forEach((line, index) => {
-          let lineStartChar = chars;
-          // keep a running total of chars
-          chars += line.innerText.length; 
+          let entityStartChar = entities[index][0];
+          let entityEndChar = entities[index][1];
+          let entityTag = entities[index][2]; 
 
-          console.log("lineStartChar = "+lineStartChar);
-          console.log("entityStartChar = "+entityStartChar);
+          // Add the annotations
+          let lines = document.querySelectorAll('.text-content');
+          console.log(lines);
 
-          if (entityStartChar >= lineStartChar) {
-            // add a line below with appropriate annotation
-            let annotation = document.createElement("div");
-            annotation.classList.add("annotated-content");
+          let totalDiff = 0;
 
-            let annotationContent = "";
+          let chars = 1;
+          lines.forEach((line, lineIndex) => {
+            let lineStartChar = chars;
+            // keep a running total of chars
+            chars += line.innerText.length; 
+            console.log("_"+line.innerText+"_");
+            console.log("lineStartChar = "+lineStartChar);
+            console.log("entityStartChar = "+entityStartChar);
 
-            // pad the content
-            let spacesBefore = entityStartChar - lineStartChar;
-            for (i = 0; i < spacesBefore; i++) {
-              annotationContent += "&nbsp;";
-            }
-            annotationContent += "<span class='entity-"+entityTag.toLowerCase()+"'>"+entityTag;
-            
+            if (entityStartChar >= lineStartChar && entityStartChar < (lineStartChar+lineLength)) {
+              //alert(entityStartChar + " >= " +lineStartChar);
+              console.log("MATCH");
+              // add a line below with appropriate annotation
+              let annotation = document.createElement("div");
+              annotation.classList.add("annotated-content");
 
-            //calculate the remainig padding
-            let spacesAfter = entityEndChar - entityStartChar - entityTag.length;
+              let annotationContent = "";
 
-            // add padding to the end
-            if (spacesAfter > 0) {
-              for (i = 0; i < spacesAfter; i++) {
+              let lineDiff = lineLength - line.innerText.length;
+              console.log("LINEDIFF = "+lineDiff);
+              totalDiff += lineDiff;
+
+              // pad the content
+              let spacesBefore = entityStartChar - lineStartChar - totalDiff;
+              for (i = 0; i < spacesBefore; i++) {
                 annotationContent += "&nbsp;";
               }
+              annotationContent += "<span class='entity-"+entityTag.toLowerCase()+"'>"+entityTag;
+              
+
+              //calculate the remainig padding
+              let spacesAfter = entityEndChar - entityStartChar - entityTag.length;
+
+              // add padding to the end
+              if (spacesAfter > 0) {
+                for (i = 0; i < spacesAfter; i++) {
+                  annotationContent += "&nbsp;";
+                }
+              }
+
+              annotationContent += "</span>";
+
+              //console.log(annotationContent);
+
+              annotation.innerHTML = annotationContent;
+              //console.log(annotation);
+              line.after(annotation);
+            } 
+
+            if (lineIndex > 0) {
+              // +1 because the splitStringFunction doesn't preserve space at end of line
+              chars += 1;
             }
-
-            annotationContent += "</span>";
-
-            console.log(annotationContent);
-
-            annotation.innerHTML = annotationContent;
-            console.log(annotation);
-            line.after(annotation);
-          }
-
-          if (index > 0) {
-            // +1 because the splitStringFunction doesn't preserve space at end of line
-            chars += 1;
-          }
-          console.log(line.innerText.length);
+            console.log(line.innerText.length);
+          });
         });
+        
       }
+      
       
 
       function splitStringIntoGroups(inputString, maxGroupLength) {
@@ -151,7 +175,7 @@
             currentGroup.push(word);
           } else {
             // If adding the current word exceeds the maximum length, start a new group
-            resultArray.push(currentGroup.join(' '));
+            resultArray.push(currentGroup.join(' ') + "_");
             currentGroup = [word];
           }
         });
