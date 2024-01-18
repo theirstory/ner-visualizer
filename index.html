@@ -165,12 +165,21 @@
         let lineLength = 100;
         let textArray = splitStringIntoGroups(text, lineLength);
         // Iterate through the result and create a new div for each group
+        
         textArray.forEach((group) => {
           let newDiv = document.createElement('div');
           newDiv.className = 'text-content';
           newDiv.textContent = group;
           document.querySelector('#output').appendChild(newDiv);
         });
+
+        // last div blank but used to anchor last line of annotations
+        // using before rather tha after that causes issues with the
+        // ordering of annotations
+
+        let lastDiv = document.createElement('div');
+        lastDiv.className = 'text-content';
+        document.querySelector('#output').appendChild(lastDiv);
 
         entities.forEach((entity, index) => {
 
@@ -181,11 +190,9 @@
           let lineLength = 0;
           let previousLineLength = 0;
           
-
           // Add the annotations
           let lines = document.querySelectorAll('.text-content');
           console.log(lines);
-
           
           lines.forEach((line, lineIndex) => {
             lineStartChar += previousLineLength;
@@ -224,7 +231,7 @@
 
               annotationContent += "</span>";
               annotation.innerHTML = annotationContent;
-              line.after(annotation);
+              lines[lineIndex+1].before(annotation);
             } 
           });
         });
