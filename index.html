@@ -26,6 +26,21 @@
       .entity-person {
         background-color:aquamarine;
       }
+      .entity-date {
+        background-color:yellow;
+      }
+      .entity-t {
+        background-color: lightblue;
+      }
+      .measure{
+        color: darkgray;
+      }
+      .scroll-container {
+        width: 800px; /* Adjust the width as needed */
+        height: 200px; /* Adjust the height as needed */
+        overflow: auto;
+        border: 1px solid #ccc; /* Optional: Add a border for better visibility */
+       }
     </style>
   </head>
   <body>
@@ -45,6 +60,17 @@
         <div class="annotated-content">
           &nbsp;&nbsp;&nbsp;&nbsp;<span class="entity-loc">[LOC]--</span>
         </div>-->
+      </p>
+      
+    </div>
+    <h4>Debug view (source of truth)</h4>
+    <div class="scroll-container">
+      <p id="debug">
+        <div id="hundreds" class="measure" style="text-wrap: nowrap; font-family: monospace;"></div>
+        <div id="tens" class="measure" style="text-wrap: nowrap; font-family: monospace;"></div>
+        <div id="units" class="measure" style="text-wrap: nowrap; font-family: monospace;"></div>
+        <div id="text-content-debug" style="text-wrap: nowrap; font-family: monospace;"></div>
+        <div id="annotated-content-debug" style="text-wrap: nowrap; font-family: monospace;"></div>
       </p>
     </div>
     <script>
@@ -76,6 +102,65 @@
         //strip out \t and \n
         text = text.replaceAll("\t"," ");
         text = text.replaceAll("\n"," ");
+
+        //debug info without line splitting
+
+        let unitsStr = "";
+        let tensStr = "";
+        let hundredsStr = "";
+        let units = 0;
+        let tens = 0;
+        let hundreds = 0;
+
+        text.split('').forEach((char, index) => {
+          units = index + 1;
+          unitsStr += units%10;
+          if (units%10 === 0) {
+            tens++;
+          }
+          tensStr += tens%10;
+
+          if (units%100 === 0) {
+            hundreds++;
+          }
+          hundredsStr += hundreds%10;
+        });
+
+        document.querySelector("#hundreds").innerText = hundredsStr;
+        document.querySelector("#tens").innerText = tensStr;
+        document.querySelector("#units").innerText = unitsStr;
+
+        document.querySelector("#text-content-debug").innerText = text;
+        let debugAnnotation = "";
+        let cursor = 0;
+
+        entities.forEach((entity, index) => {
+
+          let entityStartChar = entities[index][0];
+          let entityEndChar = entities[index][1];
+          let entityTag = entities[index][2]; 
+
+          console.log("cursor = "+cursor);
+          console.log("entityStartChar = "+entityStartChar);
+          console.log("entityTag.length = "+entityTag.length);
+
+          for (let i = cursor + 1; i < entityStartChar; i++) {
+            debugAnnotation += "&nbsp;";
+            cursor++;
+          }
+
+          debugAnnotation += "<span class='entity-"+entityTag.toLowerCase()+"'>"+entityTag;
+
+          for (let i = cursor + 1; i < (entityEndChar - entityTag.length); i++) {
+            debugAnnotation += "&nbsp;";
+          }
+
+          debugAnnotation += "</span>";
+
+          cursor = entityEndChar - 1;
+        });
+
+        document.querySelector("#annotated-content-debug").innerHTML = debugAnnotation;
         
         let lineLength = 100;
         let textArray = splitStringIntoGroups(text, lineLength);
@@ -92,24 +177,27 @@
           let entityStartChar = entities[index][0];
           let entityEndChar = entities[index][1];
           let entityTag = entities[index][2]; 
+          let lineStartChar = 1;
+          let lineLength = 0;
+          let previousLineLength = 0;
+          
 
           // Add the annotations
           let lines = document.querySelectorAll('.text-content');
           console.log(lines);
 
-          let totalDiff = 0;
-
-          let chars = 1;
+          
           lines.forEach((line, lineIndex) => {
-            let lineStartChar = chars;
-            // keep a running total of chars
-            chars += line.innerText.length; 
-            console.log("_"+line.innerText+"_");
+            lineStartChar += previousLineLength;
+            lineLength = line.innerText.length + 1;
+            previousLineLength = lineLength;
+
+            console.log(line.innerText);
             console.log("lineStartChar = "+lineStartChar);
             console.log("entityStartChar = "+entityStartChar);
+            console.log("previousLineLength = "+previousLineLength);
 
             if (entityStartChar >= lineStartChar && entityStartChar < (lineStartChar+lineLength)) {
-              //alert(entityStartChar + " >= " +lineStartChar);
               console.log("MATCH");
               // add a line below with appropriate annotation
               let annotation = document.createElement("div");
@@ -117,18 +205,13 @@
 
               let annotationContent = "";
 
-              let lineDiff = lineLength - line.innerText.length;
-              console.log("LINEDIFF = "+lineDiff);
-              totalDiff += lineDiff;
-
               // pad the content
-              let spacesBefore = entityStartChar - lineStartChar - totalDiff;
+              let spacesBefore = entityStartChar - lineStartChar;
               for (i = 0; i < spacesBefore; i++) {
                 annotationContent += "&nbsp;";
               }
               annotationContent += "<span class='entity-"+entityTag.toLowerCase()+"'>"+entityTag;
               
-
               //calculate the remainig padding
               let spacesAfter = entityEndChar - entityStartChar - entityTag.length;
 
@@ -140,19 +223,9 @@
               }
 
               annotationContent += "</span>";
-
-              //console.log(annotationContent);
-
               annotation.innerHTML = annotationContent;
-              //console.log(annotation);
               line.after(annotation);
             } 
-
-            if (lineIndex > 0) {
-              // +1 because the splitStringFunction doesn't preserve space at end of line
-              chars += 1;
-            }
-            console.log(line.innerText.length);
           });
         });
         
@@ -175,7 +248,7 @@
             currentGroup.push(word);
           } else {
             // If adding the current word exceeds the maximum length, start a new group
-            resultArray.push(currentGroup.join(' ') + "_");
+            resultArray.push(currentGroup.join(' ')+"");
             currentGroup = [word];
           }
         });
